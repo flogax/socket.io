@@ -1,3 +1,12 @@
+if (typeof String.prototype.startsWith != 'function') {
+  // see below for better implementation!
+  String.prototype.startsWith = function (str){
+    return this.indexOf(str) === 0;
+  };
+}
+
+function compareNumbers(a, b) {return a - b;}
+
 $(function() {
   var FADE_TIME = 150; // ms
   var TYPING_TIMER_LENGTH = 400; // ms
@@ -59,12 +68,57 @@ $(function() {
     // if there is a non-empty message and a socket connection
     if (message && connected) {
       $inputMessage.val('');
+      if(message.startsWith('DICE:')){
+        var dices = [];
+        var puf1 = '';
+        for(var i = 5; i < message.length; i++){
+          if(message[i] === ' '){
+            if(puf1 !== ''){
+              dices.push(puf1);
+            }
+            puf1 = '';
+          }else if(message[i] === 'd' || message[i] === 'D'){
+            puf1 = puf1 + message[i];
+          }else if(message[i].match(/^\d/)){
+              puf1 = puf1 + message[i];
+          }
+        }
+        if(puf1 !== ''){
+          dices.push(puf1);
+        }
+        for(var j = 0; j < dices.length; j++){
+          if(dices[j].match(/^\d+[dD]\d+/)){
+
+            var puffer = dices[j].split(/[dD]/);
+            var count = parseInt(puffer[0]);
+            var msgPuffer = [] ;
+
+            addChatMessage({
+              username: username,
+              message: dices[j] + ": "
+            });
+            socket.emit('new message', dices[j] + ": ");
+
+
+            for(var x = 1 ; x <= count ; x++){
+              msgPuffer.push(Math.floor(Math.random() * parseInt(puffer[1]) + 1));
+            }
+            msgPuffer.sort(compareNumbers);
+            addChatMessage({
+              username: username,
+              message: msgPuffer
+            });
+            socket.emit('new message', msgPuffer);
+          }
+        }
+      }else{
       addChatMessage({
         username: username,
         message: message
       });
       // tell server to execute 'new message' and send along one parameter
       socket.emit('new message', message);
+    }
     }
   }
 
